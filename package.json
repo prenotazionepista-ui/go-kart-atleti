@@ -1,0 +1,12 @@
+{
+  "name": "go-kart-atleti",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gestionale clienti/atleti per kartodromo indoor, con classifica pubblica dei tempi.",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.34.3"
+  }
+}

@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Go-kart Marotta / Atleti</title>
+<style>
+  :root{
+    --blue:#1454d8;
+    --blue-dark:#0d3aa0;
+    --red:#e0263c;
+    --red-dark:#b81d30;
+    --black:#111111;
+    --bg:#f5f6f8;
+    --card:#ffffff;
+    --gray:#6b7280;
+    --border:#e5e7eb;
+    --radius:16px;
+    --gold:#e8b923;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--black);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:520px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:24px;}
+
+  header.app-header{
+    background:var(--blue);color:#fff;padding:14px 18px 16px;
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;gap:12px;
+  }
+  header.app-header img.logo{height:42px;width:42px;object-fit:contain;border-radius:8px;background:#fff;}
+  header.app-header .titles{display:flex;flex-direction:column;line-height:1.25;}
+  header.app-header .titles .name{font-weight:700;font-size:17px;letter-spacing:.2px;}
+  header.app-header .titles .subtitle{font-size:12.5px;color:#c9c9cf;}
+
+  #offline-banner{
+    display:none;background:#fff4d6;color:#7a5b00;font-size:12.5px;text-align:center;
+    padding:7px 12px;border-bottom:1px solid #f0dfa0;
+  }
+
+  .content{padding:14px 14px 6px;}
+
+  .search-box{position:relative;margin-bottom:12px;}
+  .search-box input{
+    width:100%;padding:12px 14px 12px 38px;border-radius:12px;border:1px solid var(--border);
+    font-size:15px;background:#fff;
+  }
+  .search-box .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.55;font-size:15px;}
+
+  .sort-row{display:flex;gap:8px;margin-bottom:10px;}
+  .sort-btn{
+    flex:1;padding:9px 4px;border-radius:12px;border:1px solid var(--border);background:#fff;
+    font-size:12.5px;font-weight:600;color:var(--black);cursor:pointer;text-align:center;line-height:1.2;
+  }
+  .sort-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+  .filter-btn-row{display:flex;justify-content:center;margin-bottom:14px;}
+  .filter-btn{
+    width:50%;min-width:160px;background:var(--blue);color:#fff;border:none;border-radius:12px;
+    padding:10px 12px;font-size:13.5px;font-weight:600;cursor:pointer;
+  }
+
+  .client-list{display:flex;flex-direction:column;gap:9px;}
+  .client-card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:11px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;
+  }
+  .client-card .pos{
+    width:26px;text-align:center;font-weight:700;color:var(--gray);font-size:14px;flex-shrink:0;
+  }
+  .client-card .info{flex:1;min-width:0;}
+  .client-card .info .fullname{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .client-card .info .phone{font-size:12.5px;color:var(--gray);margin-top:1px;}
+  .badge{
+    background:var(--blue);color:#fff;font-weight:700;font-size:12.5px;padding:6px 10px;
+    border-radius:999px;white-space:nowrap;flex-shrink:0;
+  }
+  .badge.gold{background:var(--gold);color:#3a2c00;}
+  .badge.empty{background:#e9eaee;color:var(--gray);}
+  .trash-btn{
+    background:none;border:none;font-size:18px;padding:4px 2px;cursor:pointer;flex-shrink:0;opacity:.75;
+  }
+  .empty-state{text-align:center;color:var(--gray);padding:40px 10px;font-size:14px;}
+
+  .bottom-actions{display:flex;gap:10px;margin-top:16px;}
+  .btn{
+    flex:1;padding:13px 10px;border-radius:12px;border:none;font-size:14px;font-weight:700;
+    cursor:pointer;text-align:center;
+  }
+  .btn-blue{background:var(--blue);color:#fff;}
+  .btn-blue:active{background:var(--blue-dark);}
+  .btn-outline{background:#fff;border:1.5px solid var(--blue);color:var(--blue);}
+  .btn-red{background:var(--red);color:#fff;}
+  .btn-red:active{background:var(--red-dark);}
+  .btn-gray{background:#eef0f3;color:var(--black);}
+  .btn-text{background:none;color:var(--gray);font-weight:600;}
+  .btn:disabled{opacity:.5;cursor:default;}
+
+  /* overlay / modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(15,15,20,.45);display:none;align-items:flex-end;
+    z-index:50;
+  }
+  .overlay.show{display:flex;}
+  .sheet{
+    background:#fff;width:100%;max-width:520px;margin:0 auto;border-radius:20px 20px 0 0;
+    max-height:92vh;overflow-y:auto;padding:18px 18px 22px;animation:slideup .18s ease-out;
+  }
+  @keyframes slideup{from{transform:translateY(24px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+  .sheet-handle{width:40px;height:4px;background:#ddd;border-radius:99px;margin:0 auto 14px;}
+  .sheet h2{margin:0 0 14px;font-size:18px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--gray);margin-bottom:5px;}
+  .field input, .field select{
+    width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--border);font-size:15px;background:#fff;
+  }
+  .form-actions{display:flex;gap:10px;margin-top:16px;}
+
+  /* filtro periodo */
+  .option-list{display:flex;flex-direction:column;gap:2px;}
+  .option-item{
+    padding:13px 6px;border-bottom:1px solid var(--border);font-size:15px;cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .option-item:last-child{border-bottom:none;}
+  .option-item.selected{color:var(--blue);font-weight:700;}
+
+  /* dettaglio cliente */
+  .detail-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+  .detail-header h2{margin:0;font-size:19px;}
+  .detail-phone{color:var(--gray);font-size:13.5px;margin:2px 0 14px;}
+  .contact-row{display:flex;gap:10px;margin-bottom:18px;}
+  .contact-row .btn{font-size:13.5px;padding:11px 8px;}
+
+  .counter-box{
+    background:#f6f7f9;border-radius:14px;padding:14px;display:flex;align-items:center;
+    justify-content:space-between;margin-bottom:16px;
+  }
+  .counter-box .label{font-size:13px;color:var(--gray);font-weight:600;}
+  .counter-box .value{font-size:22px;font-weight:800;min-width:34px;text-align:center;}
+  .counter-controls{display:flex;align-items:center;gap:14px;}
+  .counter-controls button{
+    width:38px;height:38px;border-radius:50%;border:none;font-size:20px;font-weight:700;
+    background:var(--blue);color:#fff;cursor:pointer;line-height:1;
+  }
+  .counter-controls button.minus{background:#e9eaee;color:var(--black);}
+
+  .visits-title{font-size:13px;font-weight:700;color:var(--gray);margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;}
+  .visit-row{
+    display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--border);font-size:14px;
+  }
+  .visit-row:last-child{border-bottom:none;}
+  .visit-row .time{font-weight:700;color:var(--blue);}
+  .visit-row .time.none{color:var(--gray);font-weight:400;}
+
+  .detail-actions{display:flex;flex-direction:column;gap:9px;margin-top:20px;}
+
+  /* import foto */
+  .import-drop{
+    border:2px dashed var(--border);border-radius:14px;padding:26px 14px;text-align:center;color:var(--gray);
+    font-size:13.5px;margin-bottom:14px;
+  }
+  .import-row{
+    background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:9px;
+  }
+  .import-row .tag{
+    display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;margin-bottom:8px;
+  }
+  .tag.esistente{background:#dbe8ff;color:var(--blue-dark);}
+  .tag.nuovo{background:#dcf5e3;color:#127a3a;}
+  .import-row .row-fields{display:flex;gap:6px;}
+  .import-row .row-fields input{flex:1;min-width:0;padding:8px 8px;border-radius:8px;border:1px solid var(--border);font-size:13.5px;}
+  .import-row .row-fields input.time-field{flex:0 0 84px;}
+  .import-row .remove-row{background:none;border:none;color:var(--red);font-size:12px;font-weight:700;margin-top:6px;cursor:pointer;padding:0;}
+  .spinner{
+    width:26px;height:26px;border:3px solid #ddd;border-top-color:var(--blue);border-radius:50%;
+    animation:spin .7s linear infinite;margin:18px auto;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .center-note{text-align:center;color:var(--gray);font-size:13.5px;}
+
+  .toast{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--blue-dark);color:#fff;
+    padding:10px 18px;border-radius:99px;font-size:13.5px;z-index:80;opacity:0;pointer-events:none;
+    transition:opacity .2s;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app-header">
+    <!-- MODIFICA QUI: se carichi un file "logo.png" nella stessa cartella, comparirà qui automaticamente -->
+    <img src="logo.png" alt="logo" class="logo" onerror="this.style.display='none'">
+    <div class="titles">
+      <div class="name">Go-kart Marotta / Atleti</div>
+      <!-- MODIFICA QUI: sottotitolo con la località -->
+      <div class="subtitle">Marotta (PU)</div>
+    </div>
+  </header>
+  <div id="offline-banner">⚠️ Modalità locale: i dati restano solo su questo dispositivo (backend non raggiungibile)</div>
+
+  <div class="content">
+    <div class="search-box">
+      <span class="icon">🔎</span>
+      <input type="text" id="search-input" placeholder="Cerca per nome o telefono...">
+    </div>
+
+    <div class="sort-row">
+      <button class="sort-btn active" data-sort="presenzeDesc">📈 Più presenze</button>
+      <button class="sort-btn" data-sort="presenzeAsc">📉 Meno presenze</button>
+      <button class="sort-btn" data-sort="tempo">🏁 Miglior tempo</button>
+    </div>
+
+    <div class="filter-btn-row" id="filter-btn-row" style="display:none;">
+      <button class="filter-btn" id="filter-btn">Filtra</button>
+    </div>
+
+    <div class="client-list" id="client-list"></div>
+    <div class="empty-state" id="empty-state" style="display:none;">Nessun cliente trovato.</div>
+
+    <div class="bottom-actions">
+      <button class="btn btn-blue" id="btn-new-client">+ Nuovo cliente</button>
+      <button class="btn btn-outline" id="btn-import-photo">📷 Importa da foto</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: form nuovo/modifica cliente -->
+<div class="overlay" id="overlay-form">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2 id="form-title">Nuovo cliente</h2>
+    <div class="field"><label>Nome</label><input type="text" id="f-nome"></div>
+    <div class="field"><label>Cognome</label><input type="text" id="f-cognome"></div>
+    <div class="field"><label>Telefono</label><input type="tel" id="f-telefono"></div>
+    <div class="form-actions">
+      <button class="btn btn-gray" id="form-cancel" style="flex:1;">Annulla</button>
+      <button class="btn btn-blue" id="form-save" style="flex:2;">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: filtro periodo -->
+<div class="overlay" id="overlay-filter">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Filtra per periodo</h2>
+    <div class="option-list" id="filter-options">
+      <div class="option-item" data-period="sempre">Sempre</div>
+      <div class="option-item" data-period="oggi">Oggi</div>
+      <div class="option-item" data-period="settimana">Ultima settimana</div>
+      <div class="option-item" data-period="mese">Ultimo mese</div>
+      <div class="option-item" data-period="anno">Ultimo anno</div>
+      <div class="option-item" data-period="giorno">Scegli giorno...</div>
+    </div>
+    <div class="field" id="date-picker-wrap" style="display:none;margin-top:10px;">
+      <input type="date" id="f-custom-date">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-gray" id="filter-cancel" style="flex:1;">Chiudi</button>
+      <button class="btn btn-blue" id="filter-apply" style="flex:1;">Applica</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: dettaglio cliente -->
+<div class="overlay" id="overlay-detail">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="detail-header">
+      <h2 id="d-fullname">—</h2>
+    </div>
+    <div class="detail-phone" id="d-phone">—</div>
+    <div class="contact-row">
+      <button class="btn btn-gray" id="d-call">📞 Chiama</button>
+      <button class="btn btn-gray" id="d-whatsapp">💬 WhatsApp</button>
+    </div>
+    <div class="counter-box">
+      <div class="label">Visite in pista</div>
+      <div class="counter-controls">
+        <button class="minus" id="d-minus">−</button>
+        <div class="value" id="d-count">0</div>
+        <button id="d-plus">+</button>
+      </div>
+    </div>
+    <div class="visits-title">Storico visite</div>
+    <div id="d-visits-list"></div>
+    <div class="detail-actions">
+      <button class="btn btn-outline" id="d-edit">✏️ Modifica dati cliente</button>
+      <button class="btn btn-red" id="d-delete">🗑️ Elimina cliente</button>
+      <button class="btn btn-text" id="d-cancel">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: importa da foto -->
+<div class="overlay" id="overlay-import">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Importa da foto</h2>
+    <div id="import-step-pick">
+      <div class="import-drop">Scatta una foto del foglio tempi oppure scegline una dalla galleria.</div>
+      <input type="file" accept="image/*" capture="environment" id="import-file-input" style="display:none;">
+      <button class="btn btn-blue" id="import-pick-btn" style="width:100%;">📷 Scegli foto</button>
+      <button class="btn btn-text" id="import-cancel-1" style="width:100%;margin-top:8px;">Annulla</button>
+    </div>
+    <div id="import-step-loading" style="display:none;">
+      <div class="spinner"></div>
+      <div class="center-note">Lettura della foto in corso...</div>
+    </div>
+    <div id="import-step-error" style="display:none;">
+      <div class="center-note" id="import-error-msg">Si è verificato un errore.</div>
+      <button class="btn btn-gray" id="import-error-close" style="width:100%;margin-top:14px;">Chiudi</button>
+    </div>
+    <div id="import-step-review" style="display:none;">
+      <div class="center-note" style="margin-bottom:10px;">Controlla e correggi i dati letti prima di importare.</div>
+      <div id="import-rows"></div>
+      <button class="btn btn-outline" id="import-add-row" style="width:100%;margin-bottom:10px;">+ Aggiungi persona</button>
+      <div class="form-actions">
+        <button class="btn btn-gray" id="import-cancel-2" style="flex:1;">Annulla</button>
+        <button class="btn btn-blue" id="import-confirm" style="flex:2;">Conferma importazione</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ======================= CONFIGURAZIONE ======================= */
+// MODIFICA QUI: incolla il link WhatsApp fisso da usare nel pulsante "WhatsApp"
+const WHATSAPP_LINK = "https://wa.me/390000000000";
+
+/* ======================= STATO ======================= */
+let state = {
+  clients: [],
+  offline: false,
+  sortMode: 'presenzeDesc', // presenzeDesc | presenzeAsc | tempo
+  filter: { type: 'sempre', date: null },
+  filterLabel: 'Filtra',
+  search: '',
+  currentDetailId: null,
+  importRows: []
+};
+
+/* ======================= UTILITA' TEMPO ======================= */
+function parseTempoMs(str){
+  if (str === null || str === undefined) return null;
+  str = String(str).trim().replace(',', '.');
+  if (!str) return null;
+  let mins = 0, rest = str;
+  if (str.indexOf(':') !== -1){
+    const parts = str.split(':');
+    mins = parseFloat(parts[0]) || 0;
+    rest = parts[1];
+  }
+  const secs = parseFloat(rest);
+  if (isNaN(secs)) return null;
+  return Math.round((mins*60+secs)*1000);
+}
+function fmtDate(iso){
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'}) +
+         ' ' + d.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+}
+function inPeriod(iso, filter){
+  if (filter.type === 'sempre') return true;
+  const d = new Date(iso);
+  const now = new Date();
+  if (filter.type === 'oggi') return d.toDateString() === now.toDateString();
+  if (filter.type === 'settimana'){
+    const from = new Date(now); from.setDate(from.getDate()-7);
+    return d >= from;
+  }
+  if (filter.type === 'mese'){
+    const from = new Date(now); from.setDate(from.getDate()-30);
+    return d >= from;
+  }
+  if (filter.type === 'anno'){
+    const from = new Date(now); from.setDate(from.getDate()-365);
+    return d >= from;
+  }
+  if (filter.type === 'giorno' && filter.date){
+    const chosen = new Date(filter.date + 'T00:00:00');
+    return d.toDateString() === chosen.toDateString();
+  }
+  return true;
+}
+function bestTimeForClient(client, filter){
+  let best = null;
+  (client.visite||[]).forEach(v=>{
+    if (!v.tempo) return;
+    if (!inPeriod(v.data, filter)) return;
+    const ms = parseTempoMs(v.tempo);
+    if (ms === null) return;
+    if (best === null || ms < best.ms) best = {ms, raw: v.tempo};
+  });
+  return best;
+}
+
+/* ======================= ARCHIVIAZIONE LOCALE (fallback) ======================= */
+const LS_KEY = 'gpkart_atleti_clients_v1';
+const LocalDB = {
+  _read(){ try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch(e){ return []; } },
+  _write(arr){ localStorage.setItem(LS_KEY, JSON.stringify(arr)); },
+  async list(){ return this._read(); },
+  async create({nome, cognome, telefono, tempo}){
+    const arr = this._read();
+    const c = {
+      id: 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+      nome: nome||'', cognome: cognome||'', telefono: telefono||'',
+      visite: [{data: new Date().toISOString(), tempo: tempo || null}],
+      createdAt: new Date().toISOString()
+    };
+    arr.push(c); this._write(arr); return c;
+  },
+  async update(id, payload){
+    const arr = this._read();
+    const idx = arr.findIndex(c=>c.id===id);
+    if (idx<0) throw new Error('Cliente non trovato');
+    const c = arr[idx];
+    if (payload.type==='edit'){ c.nome=payload.nome; c.cognome=payload.cognome; c.telefono=payload.telefono; }
+    else if (payload.type==='increment'){ c.visite = c.visite||[]; c.visite.unshift({data:new Date().toISOString(), tempo:null}); }
+    else if (payload.type==='decrement'){ if ((c.visite||[]).length>0) c.visite.shift(); }
+    else if (payload.type==='addVisit'){ c.visite = c.visite||[]; c.visite.unshift({data: payload.data||new Date().toISOString(), tempo: payload.tempo||null}); }
+    arr[idx]=c; this._write(arr); return c;
+  },
+  async remove(id){ const arr=this._read().filter(c=>c.id!==id); this._write(arr); }
+};
+
+/* ======================= API (con fallback automatico) ======================= */
+const Api = {
+  async detectBackend(){
+    try{
+      const ctrl = new AbortController();
+      const t = setTimeout(()=>ctrl.abort(), 3500);
+      const res = await fetch('/api/clients', {signal: ctrl.signal, cache:'no-store'});
+      clearTimeout(t);
+      return res.ok;
+    }catch(e){ return false; }
+  },
+  async list(){
+    if (state.offline) return LocalDB.list();
+    const r = await fetch('/api/clients', {cache:'no-store'});
+    if (!r.ok) throw new Error('Errore nel caricamento clienti');
+    return r.json();
+  },
+  async create(data){
+    if (state.offline) return LocalDB.create(data);
+    const r = await fetch('/api/clients', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)});
+    if (!r.ok) throw new Error('Errore nella creazione cliente');
+    return r.json();
+  },
+  async update(id, payload){
+    if (state.offline) return LocalDB.update(id, payload);
+    const r = await fetch('/api/clients/'+encodeURIComponent(id), {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    if (!r.ok) throw new Error('Errore nell\'aggiornamento cliente');
+    return r.json();
+  },
+  async remove(id){
+    if (state.offline) return LocalDB.remove(id);
+    const r = await fetch('/api/clients/'+encodeURIComponent(id), {method:'DELETE'});
+    if (!r.ok) throw new Error('Errore nell\'eliminazione cliente');
+    return true;
+  },
+  async importPhoto(base64, mediaType){
+    if (state.offline){
+      const e = new Error('Funzione non disponibile in modalità locale'); e.offline = true; throw e;
+    }
+    const r = await fetch('/api/vision', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({image: base64, mediaType})});
+    if (!r.ok){
+      let msg = 'Errore nella lettura della foto';
+      try{ const j = await r.json(); if (j && j.error) msg = j.error; }catch(e){}
+      throw new Error(msg);
+    }
+    return r.json();
+  }
+};
+
+/* ======================= TOAST ======================= */
+let toastTimer = null;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* ======================= RENDER ELENCO ======================= */
+function getFilteredSortedClients(){
+  const q = state.search.trim().toLowerCase();
+  let list = state.clients.filter(c=>{
+    if (!q) return true;
+    const hay = ((c.nome||'')+' '+(c.cognome||'')+' '+(c.telefono||'')).toLowerCase();
+    return hay.indexOf(q) !== -1;
+  });
+  if (state.sortMode === 'presenzeDesc'){
+    list.sort((a,b)=>(b.visite||[]).length-(a.visite||[]).length);
+  } else if (state.sortMode === 'presenzeAsc'){
+    list.sort((a,b)=>(a.visite||[]).length-(b.visite||[]).length);
+  } else if (state.sortMode === 'tempo'){
+    list = list.map(c=>({c, best: bestTimeForClient(c, state.filter)}));
+    list.sort((a,b)=>{
+      if (a.best===null && b.best===null) return 0;
+      if (a.best===null) return 1;
+      if (b.best===null) return -1;
+      return a.best.ms - b.best.ms;
+    });
+    list = list.map(x=>Object.assign({}, x.c, {_best:x.best}));
+  }
+  return list;
+}
+
+function renderList(){
+  const listEl = document.getElementById('client-list');
+  const emptyEl = document.getElementById('empty-state');
+  const items = getFilteredSortedClients();
+  listEl.innerHTML = '';
+  emptyEl.style.display = items.length ? 'none' : 'block';
+
+  items.forEach((c, i)=>{
+    const card = document.createElement('div');
+    card.className = 'client-card';
+    card.dataset.id = c.id;
+
+    let badgeHtml;
+    if (state.sortMode === 'tempo'){
+      const best = c._best;
+      if (best){
+        const medal = i===0 ? '🥇 ' : '';
+        badgeHtml = `<span class="badge ${i===0?'gold':''}">${medal}${escapeHtml(best.raw)}</span>`;
+      } else {
+        badgeHtml = `<span class="badge empty">—</span>`;
+      }
+    } else {
+      const n = (c.visite||[]).length;
+      badgeHtml = `<span class="badge">${n} visit${n===1?'a':'e'}</span>`;
+    }
+
+    card.innerHTML = `
+      <div class="pos">${i+1}</div>
+      <div class="info">
+        <div class="fullname">${escapeHtml(c.nome)} ${escapeHtml(c.cognome)}</div>
+        <div class="phone">${escapeHtml(c.telefono||'')}</div>
+      </div>
+      ${badgeHtml}
+      <button class="trash-btn" data-id="${c.id}" title="Elimina">🗑️</button>
+    `;
+    card.addEventListener('click', (ev)=>{
+      if (ev.target.closest('.trash-btn')) return;
+      openDetail(c.id);
+    });
+    listEl.appendChild(card);
+  });
+
+  listEl.querySelectorAll('.trash-btn').forEach(btn=>{
+    btn.addEventListener('click', async (ev)=>{
+      ev.stopPropagation();
+      const id = btn.dataset.id;
+      const c = state.clients.find(x=>x.id===id);
+      if (!c) return;
+      if (!confirm(`Eliminare ${c.nome} ${c.cognome}? L'operazione non è reversibile.`)) return;
+      try{
+        await Api.remove(id);
+        await reloadClients();
+        toast('Cliente eliminato');
+      }catch(e){ toast('Errore: '+e.message); }
+    });
+  });
+}
+
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+async function reloadClients(){
+  try{
+    state.clients = await Api.list();
+  }catch(e){
+    toast('Errore nel caricamento: '+e.message);
+    state.clients = state.clients || [];
+  }
+  renderList();
+}
+
+/* ======================= SORT / FILTER UI ======================= */
+document.querySelectorAll('.sort-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.sortMode = btn.dataset.sort;
+    document.getElementById('filter-btn-row').style.display = state.sortMode === 'tempo' ? 'flex' : 'none';
+    renderList();
+  });
+});
+
+document.getElementById('search-input').addEventListener('input', (e)=>{
+  state.search = e.target.value;
+  renderList();
+});
+
+const overlayFilter = document.getElementById('overlay-filter');
+document.getElementById('filter-btn').addEventListener('click', ()=>{
+  overlayFilter.classList.add('show');
+  document.querySelectorAll('#filter-options .option-item').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.period === state.filter.type);
+  });
+  document.getElementById('date-picker-wrap').style.display = state.filter.type==='giorno' ? 'block':'none';
+});
+document.getElementById('filter-cancel').addEventListener('click', ()=>overlayFilter.classList.remove('show'));
+
+let pendingFilterType = state.filter.type;
+document.querySelectorAll('#filter-options .option-item').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    pendingFilterType = el.dataset.period;
+    document.querySelectorAll('#filter-options .option-item').forEach(o=>o.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('date-picker-wrap').style.display = pendingFilterType==='giorno' ? 'block':'none';
+  });
+});
+
+document.getElementById('filter-apply').addEventListener('click', ()=>{
+  state.filter.type = pendingFilterType;
+  const labels = {sempre:'Sempre', oggi:'Oggi', settimana:'Ultima settimana', mese:'Ultimo mese', anno:'Ultimo anno', giorno:null};
+  if (pendingFilterType === 'giorno'){
+    const val = document.getElementById('f-custom-date').value;
+    if (!val){ toast('Seleziona una data'); return; }
+    state.filter.date = val;
+    const d = new Date(val+'T00:00:00');
+    state.filterLabel = d.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'});
+  } else {
+    state.filter.date = null;
+    state.filterLabel = labels[pendingFilterType] || 'Filtra';
+  }
+  document.getElementById('filter-btn').textContent = state.filterLabel;
+  overlayFilter.classList.remove('show');
+  renderList();
+});
+
+/* ======================= FORM NUOVO / MODIFICA CLIENTE ======================= */
+const overlayForm = document.getElementById('overlay-form');
+let formMode = 'new'; // new | edit
+let editingId = null;
+
+function openNewForm(){
+  formMode = 'new'; editingId = null;
+  document.getElementById('form-title').textContent = 'Nuovo cliente';
+  document.getElementById('f-nome').value = '';
+  document.getElementById('f-cognome').value = '';
+  document.getElementById('f-telefono').value = '';
+  overlayForm.classList.add('show');
+}
+function openEditForm(client){
+  formMode = 'edit'; editingId = client.id;
+  document.getElementById('form-title').textContent = 'Modifica dati cliente';
+  document.getElementById('f-nome').value = client.nome || '';
+  document.getElementById('f-cognome').value = client.cognome || '';
+  document.getElementById('f-telefono').value = client.telefono || '';
+  overlayForm.classList.add('show');
+}
+document.getElementById('btn-new-client').addEventListener('click', openNewForm);
+document.getElementById('form-cancel').addEventListener('click', ()=>overlayForm.classList.remove('show'));
+document.getElementById('form-save').addEventListener('click', async ()=>{
+  const nome = document.getElementById('f-nome').value.trim();
+  const cognome = document.getElementById('f-cognome').value.trim();
+  const telefono = document.getElementById('f-telefono').value.trim();
+  if (!nome || !cognome){ toast('Inserisci nome e cognome'); return; }
+  try{
+    if (formMode === 'new'){
+      await Api.create({nome, cognome, telefono});
+      toast('Cliente aggiunto');
+    } else {
+      await Api.update(editingId, {type:'edit', nome, cognome, telefono});
+      toast('Dati aggiornati');
+    }
+    overlayForm.classList.remove('show');
+    await reloadClients();
+    if (formMode === 'edit' && state.currentDetailId === editingId){
+      const updated = state.clients.find(c=>c.id===editingId);
+      if (updated) fillDetail(updated);
+    }
+  }catch(e){ toast('Errore: '+e.message); }
+});
+
+/* ======================= DETTAGLIO CLIENTE ======================= */
+const overlayDetail = document.getElementById('overlay-detail');
+function openDetail(id){
+  const c = state.clients.find(x=>x.id===id);
+  if (!c) return;
+  state.currentDetailId = id;
+  fillDetail(c);
+  overlayDetail.classList.add('show');
+}
+function fillDetail(c){
+  document.getElementById('d-fullname').textContent = `${c.nome} ${c.cognome}`;
+  document.getElementById('d-phone').textContent = c.telefono || 'Nessun numero registrato';
+  document.getElementById('d-count').textContent = (c.visite||[]).length;
+  document.getElementById('d-call').onclick = ()=>{ if (c.telefono) window.location.href = 'tel:'+c.telefono; else toast('Nessun numero registrato'); };
+  document.getElementById('d-whatsapp').onclick = ()=>{ window.open(WHATSAPP_LINK, '_blank'); };
+
+  const listEl = document.getElementById('d-visits-list');
+  const visite = (c.visite||[]).slice();
+  if (!visite.length){
+    listEl.innerHTML = '<div class="center-note">Nessuna visita registrata.</div>';
+  } else {
+    listEl.innerHTML = visite.map(v=>`
+      <div class="visit-row">
+        <span>${fmtDate(v.data)}</span>
+        <span class="time ${v.tempo?'':'none'}">${v.tempo ? escapeHtml(v.tempo) : '—'}</span>
+      </div>
+    `).join('');
+  }
+}
+document.getElementById('d-plus').addEventListener('click', async ()=>{
+  const id = state.currentDetailId;
+  try{
+    const updated = await Api.update(id, {type:'increment'});
+    await reloadClients();
+    const fresh = state.clients.find(x=>x.id===id) || updated;
+    fillDetail(fresh);
+  }catch(e){ toast('Errore: '+e.message); }
+});
+document.getElementById('d-minus').addEventListener('click', async ()=>{
+  const id = state.currentDetailId;
+  const c = state.clients.find(x=>x.id===id);
+  if (c && (c.visite||[]).length===0) return;
+  try{
+    const updated = await Api.update(id, {type:'decrement'});
+    await reloadClients();
+    const fresh = state.clients.find(x=>x.id===id) || updated;
+    fillDetail(fresh);
+  }catch(e){ toast('Errore: '+e.message); }
+});
+document.getElementById('d-edit').addEventListener('click', ()=>{
+  const c = state.clients.find(x=>x.id===state.currentDetailId);
+  if (c) openEditForm(c);
+});
+document.getElementById('d-delete').addEventListener('click', async ()=>{
+  const c = state.clients.find(x=>x.id===state.currentDetailId);
+  if (!c) return;
+  if (!confirm(`Eliminare definitivamente ${c.nome} ${c.cognome}?`)) return;
+  try{
+    await Api.remove(c.id);
+    overlayDetail.classList.remove('show');
+    await reloadClients();
+    toast('Cliente eliminato');
+  }catch(e){ toast('Errore: '+e.message); }
+});
+document.getElementById('d-cancel').addEventListener('click', ()=>overlayDetail.classList.remove('show'));
+
+/* ======================= IMPORTA DA FOTO ======================= */
+const overlayImport = document.getElementById('overlay-import');
+function resetImportUI(){
+  document.getElementById('import-step-pick').style.display = 'block';
+  document.getElementById('import-step-loading').style.display = 'none';
+  document.getElementById('import-step-error').style.display = 'none';
+  document.getElementById('import-step-review').style.display = 'none';
+  state.importRows = [];
+}
+document.getElementById('btn-import-photo').addEventListener('click', ()=>{
+  resetImportUI();
+  overlayImport.classList.add('show');
+});
+document.getElementById('import-cancel-1').addEventListener('click', ()=>overlayImport.classList.remove('show'));
+document.getElementById('import-cancel-2').addEventListener('click', ()=>overlayImport.classList.remove('show'));
+document.getElementById('import-error-close').addEventListener('click', ()=>overlayImport.classList.remove('show'));
+
+document.getElementById('import-pick-btn').addEventListener('click', ()=>{
+  document.getElementById('import-file-input').click();
+});
+
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error('Impossibile leggere il file'));
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=>reject(new Error('Immagine non valida'));
+      img.onload = ()=>{
+        const MAX = 1600;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX){
+          if (w >= h){ h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+        const base64 = dataUrl.split(',')[1];
+        resolve({base64, mediaType: 'image/jpeg'});
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function normalizeName(s){
+  return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+}
+function findExistingMatch(nome, cognome){
+  const n = normalizeName(nome), c = normalizeName(cognome);
+  return state.clients.find(cl => normalizeName(cl.nome)===n && normalizeName(cl.cognome)===c) || null;
+}
+
+document.getElementById('import-file-input').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  document.getElementById('import-step-pick').style.display = 'none';
+  document.getElementById('import-step-loading').style.display = 'block';
+  try{
+    const {base64, mediaType} = await compressImage(file);
+    const result = await Api.importPhoto(base64, mediaType);
+    const persone = (result && result.persone) || [];
+    if (!persone.length){
+      throw new Error('Nessun dato leggibile trovato nella foto');
+    }
+    state.importRows = persone.map(p=>{
+      const match = findExistingMatch(p.nome, p.cognome);
+      return { nome: p.nome||'', cognome: p.cognome||'', tempo: p.tempo||'', matchId: match ? match.id : null };
+    });
+    renderImportRows();
+    document.getElementById('import-step-loading').style.display = 'none';
+    document.getElementById('import-step-review').style.display = 'block';
+  }catch(err){
+    document.getElementById('import-step-loading').style.display = 'none';
+    document.getElementById('import-step-error').style.display = 'block';
+    document.getElementById('import-error-msg').textContent = err.offline
+      ? 'La lettura automatica da foto funziona solo nella versione pubblicata online (richiede il backend).'
+      : ('Errore: ' + err.message);
+  }
+});
+
+function renderImportRows(){
+  const el = document.getElementById('import-rows');
+  el.innerHTML = state.importRows.map((r, i)=>`
+    <div class="import-row" data-i="${i}">
+      <span class="tag ${r.matchId ? 'esistente' : 'nuovo'}">${r.matchId ? 'Cliente esistente' : 'Nuovo cliente'}</span>
+      <div class="row-fields">
+        <input type="text" placeholder="Nome" value="${escapeHtml(r.nome)}" data-field="nome">
+        <input type="text" placeholder="Cognome" value="${escapeHtml(r.cognome)}" data-field="cognome">
+        <input type="text" placeholder="Tempo" class="time-field" value="${escapeHtml(r.tempo)}" data-field="tempo">
+      </div>
+      <button class="remove-row" data-i="${i}">Rimuovi</button>
+    </div>
+  `).join('');
+  el.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const row = inp.closest('.import-row');
+      const i = Number(row.dataset.i);
+      const field = inp.dataset.field;
+      state.importRows[i][field] = inp.value;
+      if (field==='nome' || field==='cognome'){
+        const match = findExistingMatch(state.importRows[i].nome, state.importRows[i].cognome);
+        state.importRows[i].matchId = match ? match.id : null;
+        renderImportRows();
+      }
+    });
+  });
+  el.querySelectorAll('.remove-row').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const i = Number(btn.dataset.i);
+      state.importRows.splice(i,1);
+      renderImportRows();
+    });
+  });
+}
+document.getElementById('import-add-row').addEventListener('click', ()=>{
+  state.importRows.push({nome:'', cognome:'', tempo:'', matchId:null});
+  renderImportRows();
+});
+
+document.getElementById('import-confirm').addEventListener('click', async ()=>{
+  const rows = state.importRows.filter(r=>r.nome.trim() && r.cognome.trim());
+  if (!rows.length){ toast('Nessuna persona da importare'); return; }
+  try{
+    for (const r of rows){
+      if (r.matchId){
+        await Api.update(r.matchId, {type:'addVisit', tempo: r.tempo || null});
+      } else {
+        await Api.create({nome:r.nome.trim(), cognome:r.cognome.trim(), telefono:'', tempo: r.tempo || null});
+      }
+    }
+    overlayImport.classList.remove('show');
+    await reloadClients();
+    toast(`Importazione completata (${rows.length})`);
+  }catch(e){ toast('Errore durante l\'importazione: '+e.message); }
+});
+
+/* ======================= AVVIO ======================= */
+async function init(){
+  state.offline = !(await Api.detectBackend());
+  document.getElementById('offline-banner').style.display = state.offline ? 'block' : 'none';
+  await reloadClients();
+}
+init();
+</script>
+</body>
+</html>

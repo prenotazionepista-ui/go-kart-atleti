@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Classifica — Go-kart Marotta / Atleti</title>
+<style>
+  :root{
+    --blue:#1454d8;
+    --blue-dark:#0d3aa0;
+    --black:#111111;
+    --bg:#f5f6f8;
+    --card:#ffffff;
+    --gray:#6b7280;
+    --border:#e5e7eb;
+    --radius:16px;
+    --gold:#e8b923;
+    --silver:#b9bec7;
+    --bronze:#c68a4a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--black);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:520px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:24px;}
+
+  header.app-header{
+    background:var(--blue);color:#fff;padding:14px 18px 16px;
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;gap:12px;
+  }
+  header.app-header img.logo{height:42px;width:42px;object-fit:contain;border-radius:8px;background:#fff;}
+  header.app-header .titles{display:flex;flex-direction:column;line-height:1.25;}
+  header.app-header .titles .name{font-weight:700;font-size:17px;letter-spacing:.2px;}
+  header.app-header .titles .subtitle{font-size:12.5px;color:#c9c9cf;}
+
+  #offline-banner{
+    display:none;background:#fff4d6;color:#7a5b00;font-size:12.5px;text-align:center;
+    padding:7px 12px;border-bottom:1px solid #f0dfa0;
+  }
+
+  .content{padding:14px 14px 6px;}
+
+  .search-box{position:relative;margin-bottom:12px;}
+  .search-box input{
+    width:100%;padding:12px 14px 12px 38px;border-radius:12px;border:1px solid var(--border);
+    font-size:15px;background:#fff;
+  }
+  .search-box .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.55;font-size:15px;}
+
+  .filter-btn-row{display:flex;justify-content:center;margin-bottom:14px;}
+  .filter-btn{
+    width:50%;min-width:160px;background:var(--blue);color:#fff;border:none;border-radius:12px;
+    padding:10px 12px;font-size:13.5px;font-weight:600;cursor:pointer;
+  }
+
+  .client-list{display:flex;flex-direction:column;gap:9px;}
+  .client-card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:12px 13px;display:flex;align-items:center;gap:10px;
+  }
+  .client-card.top1{border-color:var(--gold);box-shadow:0 0 0 1.5px var(--gold) inset;}
+  .client-card .pos{width:28px;text-align:center;font-weight:700;color:var(--gray);font-size:14px;flex-shrink:0;}
+  .client-card .info{flex:1;min-width:0;}
+  .client-card .info .fullname{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .badge{
+    background:var(--blue);color:#fff;font-weight:700;font-size:13px;padding:7px 11px;
+    border-radius:999px;white-space:nowrap;flex-shrink:0;
+  }
+  .badge.gold{background:var(--gold);color:#3a2c00;}
+  .empty-state{text-align:center;color:var(--gray);padding:40px 10px;font-size:14px;}
+
+  .overlay{
+    position:fixed;inset:0;background:rgba(15,15,20,.45);display:none;align-items:flex-end;z-index:50;
+  }
+  .overlay.show{display:flex;}
+  .sheet{
+    background:#fff;width:100%;max-width:520px;margin:0 auto;border-radius:20px 20px 0 0;
+    max-height:92vh;overflow-y:auto;padding:18px 18px 22px;
+  }
+  .sheet-handle{width:40px;height:4px;background:#ddd;border-radius:99px;margin:0 auto 14px;}
+  .sheet h2{margin:0 0 14px;font-size:18px;}
+  .option-list{display:flex;flex-direction:column;gap:2px;}
+  .option-item{
+    padding:13px 6px;border-bottom:1px solid var(--border);font-size:15px;cursor:pointer;
+  }
+  .option-item:last-child{border-bottom:none;}
+  .option-item.selected{color:var(--blue);font-weight:700;}
+  .field{margin-top:10px;}
+  .field input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--border);font-size:15px;}
+  .form-actions{display:flex;gap:10px;margin-top:16px;}
+  .btn{flex:1;padding:13px 10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;text-align:center;}
+  .btn-blue{background:var(--blue);color:#fff;}
+  .btn-gray{background:#eef0f3;color:var(--black);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app-header">
+    <!-- Se carichi un file "logo.png" nella stessa cartella, comparirà qui automaticamente -->
+    <img src="logo.png" alt="logo" class="logo" onerror="this.style.display='none'">
+    <div class="titles">
+      <div class="name">Go-kart Marotta / Atleti</div>
+      <!-- MODIFICA QUI: sottotitolo con la località -->
+      <div class="subtitle">Classifica — Marotta (PU)</div>
+    </div>
+  </header>
+  <div id="offline-banner">⚠️ Modalità locale: dati di esempio su questo dispositivo (backend non raggiungibile)</div>
+
+  <div class="content">
+    <div class="search-box">
+      <span class="icon">🔎</span>
+      <input type="text" id="search-input" placeholder="Cerca il tuo nome...">
+    </div>
+    <div class="filter-btn-row">
+      <button class="filter-btn" id="filter-btn">Filtra</button>
+    </div>
+    <div class="client-list" id="client-list"></div>
+    <div class="empty-state" id="empty-state" style="display:none;">Nessun tempo registrato.</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-filter">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Filtra per periodo</h2>
+    <div class="option-list" id="filter-options">
+      <div class="option-item" data-period="sempre">Sempre</div>
+      <div class="option-item" data-period="oggi">Oggi</div>
+      <div class="option-item" data-period="settimana">Ultima settimana</div>
+      <div class="option-item" data-period="mese">Ultimo mese</div>
+      <div class="option-item" data-period="anno">Ultimo anno</div>
+      <div class="option-item" data-period="giorno">Scegli giorno...</div>
+    </div>
+    <div class="field" id="date-picker-wrap" style="display:none;">
+      <input type="date" id="f-custom-date">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-gray" id="filter-cancel">Chiudi</button>
+      <button class="btn btn-blue" id="filter-apply">Applica</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let state = { rows: [], offline: false, search: '', filter: {type:'sempre', date:null}, filterLabel: 'Filtra' };
+
+function parseTempoMs(str){
+  if (str === null || str === undefined) return null;
+  str = String(str).trim().replace(',', '.');
+  if (!str) return null;
+  let mins = 0, rest = str;
+  if (str.indexOf(':') !== -1){
+    const parts = str.split(':');
+    mins = parseFloat(parts[0]) || 0;
+    rest = parts[1];
+  }
+  const secs = parseFloat(rest);
+  if (isNaN(secs)) return null;
+  return Math.round((mins*60+secs)*1000);
+}
+function inPeriod(iso, filter){
+  if (filter.type === 'sempre') return true;
+  const d = new Date(iso);
+  const now = new Date();
+  if (filter.type === 'oggi') return d.toDateString() === now.toDateString();
+  if (filter.type === 'settimana'){ const from = new Date(now); from.setDate(from.getDate()-7); return d >= from; }
+  if (filter.type === 'mese'){ const from = new Date(now); from.setDate(from.getDate()-30); return d >= from; }
+  if (filter.type === 'anno'){ const from = new Date(now); from.setDate(from.getDate()-365); return d >= from; }
+  if (filter.type === 'giorno' && filter.date){
+    const chosen = new Date(filter.date + 'T00:00:00');
+    return d.toDateString() === chosen.toDateString();
+  }
+  return true;
+}
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+const LS_KEY = 'gpkart_atleti_clients_v1';
+function localLeaderboard(filter){
+  let arr = [];
+  try{ arr = JSON.parse(localStorage.getItem(LS_KEY)) || []; }catch(e){ arr = []; }
+  const rows = [];
+  arr.forEach(c=>{
+    let best = null;
+    (c.visite||[]).forEach(v=>{
+      if (!v.tempo) return;
+      if (!inPeriod(v.data, filter)) return;
+      const ms = parseTempoMs(v.tempo);
+      if (ms===null) return;
+      if (best===null || ms<best.ms) best = {ms, raw:v.tempo};
+    });
+    if (best) rows.push({id:c.id, nome:c.nome, cognome:c.cognome, tempo:best.raw, ms:best.ms});
+  });
+  rows.sort((a,b)=>a.ms-b.ms);
+  return rows;
+}
+
+async function detectBackend(){
+  try{
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort(), 3500);
+    const res = await fetch('/api/leaderboard?period=sempre', {signal: ctrl.signal, cache:'no-store'});
+    clearTimeout(t);
+    return res.ok;
+  }catch(e){ return false; }
+}
+
+async function loadLeaderboard(){
+  if (state.offline){
+    state.rows = localLeaderboard(state.filter);
+    render();
+    return;
+  }
+  try{
+    const params = new URLSearchParams({period: state.filter.type});
+    if (state.filter.type === 'giorno' && state.filter.date) params.set('date', state.filter.date);
+    const r = await fetch('/api/leaderboard?'+params.toString(), {cache:'no-store'});
+    if (!r.ok) throw new Error('errore');
+    state.rows = await r.json();
+  }catch(e){
+    state.rows = [];
+  }
+  render();
+}
+
+function render(){
+  const q = state.search.trim().toLowerCase();
+  const items = state.rows.filter(r=>{
+    if (!q) return true;
+    return ((r.nome||'')+' '+(r.cognome||'')).toLowerCase().indexOf(q) !== -1;
+  });
+  const listEl = document.getElementById('client-list');
+  const emptyEl = document.getElementById('empty-state');
+  emptyEl.style.display = items.length ? 'none' : 'block';
+  listEl.innerHTML = items.map((r,i)=>`
+    <div class="client-card ${i===0?'top1':''}">
+      <div class="pos">${i+1}</div>
+      <div class="info"><div class="fullname">${escapeHtml(r.nome)} ${escapeHtml(r.cognome)}</div></div>
+      <span class="badge ${i===0?'gold':''}">${i===0?'🥇 ':''}${escapeHtml(r.tempo)}</span>
+    </div>
+  `).join('');
+}
+
+document.getElementById('search-input').addEventListener('input', (e)=>{
+  state.search = e.target.value;
+  render();
+});
+
+const overlayFilter = document.getElementById('overlay-filter');
+let pendingFilterType = state.filter.type;
+document.getElementById('filter-btn').addEventListener('click', ()=>{
+  overlayFilter.classList.add('show');
+  document.querySelectorAll('#filter-options .option-item').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.period === state.filter.type);
+  });
+  document.getElementById('date-picker-wrap').style.display = state.filter.type==='giorno' ? 'block':'none';
+});
+document.getElementById('filter-cancel').addEventListener('click', ()=>overlayFilter.classList.remove('show'));
+document.querySelectorAll('#filter-options .option-item').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    pendingFilterType = el.dataset.period;
+    document.querySelectorAll('#filter-options .option-item').forEach(o=>o.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('date-picker-wrap').style.display = pendingFilterType==='giorno' ? 'block':'none';
+  });
+});
+document.getElementById('filter-apply').addEventListener('click', async ()=>{
+  state.filter.type = pendingFilterType;
+  const labels = {sempre:'Sempre', oggi:'Oggi', settimana:'Ultima settimana', mese:'Ultimo mese', anno:'Ultimo anno'};
+  if (pendingFilterType === 'giorno'){
+    const val = document.getElementById('f-custom-date').value;
+    if (!val){ return; }
+    state.filter.date = val;
+    const d = new Date(val+'T00:00:00');
+    state.filterLabel = d.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'});
+  } else {
+    state.filter.date = null;
+    state.filterLabel = labels[pendingFilterType] || 'Filtra';
+  }
+  document.getElementById('filter-btn').textContent = state.filterLabel;
+  overlayFilter.classList.remove('show');
+  await loadLeaderboard();
+});
+
+async function init(){
+  state.offline = !(await detectBackend());
+  document.getElementById('offline-banner').style.display = state.offline ? 'block' : 'none';
+  await loadLeaderboard();
+}
+init();
+</script>
+</body>
+</html>
