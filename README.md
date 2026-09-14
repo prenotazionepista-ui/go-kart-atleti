@@ -1,4 +1,4 @@
-# Go-kart Marotta / Atleti — gestionale clienti
+ # Go-kart Marotta / Atleti — gestionale clienti
 
 Guida passo-passo per pubblicare l'app online, scritta per chi non è un tecnico.
 Segui i passaggi nell'ordine indicato: ogni passaggio si basa sul precedente.
