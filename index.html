@@ -300,8 +300,10 @@
     <h2>Importa da foto</h2>
     <div id="import-step-pick">
       <div class="import-drop">Scatta una foto del foglio tempi oppure scegline una dalla galleria.</div>
-      <input type="file" accept="image/*" capture="environment" id="import-file-input" style="display:none;">
-      <button class="btn btn-blue" id="import-pick-btn" style="width:100%;">📷 Scegli foto</button>
+      <input type="file" accept="image/*" capture="environment" id="import-file-input-camera" style="display:none;">
+      <input type="file" accept="image/*" id="import-file-input-gallery" style="display:none;">
+      <button class="btn btn-blue" id="import-camera-btn" style="width:100%;">📷 Scatta foto</button>
+      <button class="btn btn-outline" id="import-gallery-btn" style="width:100%;margin-top:8px;">🖼️ Scegli dalla galleria</button>
       <button class="btn btn-text" id="import-cancel-1" style="width:100%;margin-top:8px;">Annulla</button>
     </div>
     <div id="import-step-loading" style="display:none;">
@@ -767,8 +769,11 @@ document.getElementById('import-cancel-1').addEventListener('click', ()=>overlay
 document.getElementById('import-cancel-2').addEventListener('click', ()=>overlayImport.classList.remove('show'));
 document.getElementById('import-error-close').addEventListener('click', ()=>overlayImport.classList.remove('show'));
 
-document.getElementById('import-pick-btn').addEventListener('click', ()=>{
-  document.getElementById('import-file-input').click();
+document.getElementById('import-camera-btn').addEventListener('click', ()=>{
+  document.getElementById('import-file-input-camera').click();
+});
+document.getElementById('import-gallery-btn').addEventListener('click', ()=>{
+  document.getElementById('import-file-input-gallery').click();
 });
 
 function compressImage(file){
@@ -806,7 +811,7 @@ function findExistingMatch(nome, cognome){
   return state.clients.find(cl => normalizeName(cl.nome)===n && normalizeName(cl.cognome)===c) || null;
 }
 
-document.getElementById('import-file-input').addEventListener('change', async (e)=>{
+async function handleImportFileChange(e){
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
@@ -833,7 +838,9 @@ document.getElementById('import-file-input').addEventListener('change', async (e
       ? 'La lettura automatica da foto funziona solo nella versione pubblicata online (richiede il backend).'
       : ('Errore: ' + err.message);
   }
-});
+}
+document.getElementById('import-file-input-camera').addEventListener('change', handleImportFileChange);
+document.getElementById('import-file-input-gallery').addEventListener('change', handleImportFileChange);
 
 function renderImportRows(){
   const el = document.getElementById('import-rows');
